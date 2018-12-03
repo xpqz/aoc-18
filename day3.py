@@ -12,27 +12,28 @@ class Claim:
 
 class Fabric:
     def __init__(self):
-        self.w, self.h = 1000, 1000
-        self.fabric = [[0 for x in range(self.w)] for y in range(self.h)]
+        self.fabric = {}
 
     def apply(self, claim):
         for y in range(claim.origin[1], claim.origin[1] + claim.size[1]):
             for x in range(claim.origin[0], claim.origin[0] + claim.size[0]):
-                self.fabric[y][x] += 1
+                if self.fabric.get((x, y), 0) == 0:
+                    self.fabric[(x, y)] = 1
+                else:
+                    self.fabric[(x, y)] += 1
 
     def disputed(self):
         shared = 0
-        for y in range(0, len(self.fabric)):
-            for x in range(0, len(self.fabric[y])):
-                if self.fabric[y][x] > 1:
-                    shared += 1
+        for value in self.fabric.values():
+            if value > 1:
+                shared += 1
 
         return shared
 
     def is_undisputed(self, claim):
         for y in range(claim.origin[1], claim.origin[1] + claim.size[1]):
             for x in range(claim.origin[0], claim.origin[0] + claim.size[0]):
-                if self.fabric[y][x] != 1:
+                if self.fabric.get((x, y), 0) != 1:
                     return False
 
         return True
