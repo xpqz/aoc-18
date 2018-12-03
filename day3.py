@@ -9,7 +9,7 @@ import re
 
 @dataclass
 class Claim:
-    id: str
+    id: int
     origin: Tuple[int, int]
     size: Tuple[int, int]
 
@@ -75,13 +75,13 @@ def parse_data(lines):
 
     # 11 @ 49,318: 25x25
     """
-    patt = re.compile(r"^(#\s*\d+)\s+@\s+(\d+),(\d+):\s+(\d+)x(\d+)")
+    patt = re.compile(r"^#(\s*\d+)\s+@\s+(\d+),(\d+):\s+(\d+)x(\d+)")
     result = []
     for line in lines:
         m = patt.match(line)
         if m:
             result.append(Claim(
-                id=m.group(1),
+                id=int(m.group(1)),
                 origin=(int(m.group(2)), int(m.group(3))),
                 size=(int(m.group(4)), int(m.group(5)))
             ))
@@ -110,6 +110,6 @@ if __name__ == "__main__":
     claims = parse_data(read_data())
     fabric = Fabric()
 
-    print(part1(fabric, claims))
+    print(f"Part1: {part1(fabric, claims)}")
     for undisputed in part2(fabric, claims):
-        print(undisputed.id)
+        print(f"Part2: {undisputed.id}")
