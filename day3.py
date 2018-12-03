@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import Tuple
 import re
-import json
 
 
 @dataclass
@@ -9,13 +8,6 @@ class Claim:
     id: str
     origin: Tuple[int, int]
     size: Tuple[int, int]
-
-    def tostr(self):
-        return json.dumps(
-            self,
-            default=lambda o: o.__dict__,
-            sort_keys=True, indent=4
-        )
 
 
 class Fabric:
@@ -27,13 +19,6 @@ class Fabric:
         for y in range(claim.origin[1], claim.origin[1] + claim.size[1]):
             for x in range(claim.origin[0], claim.origin[0] + claim.size[0]):
                 self.fabric[y][x] += 1
-
-    def display(self):
-        for y in range(0, len(self.fabric)):
-            for x in range(0, len(self.fabric[y])):
-                print("." if self.fabric[y][x] ==
-                      0 else self.fabric[y][x], end='')
-            print()
 
     def disputed(self):
         shared = 0
@@ -106,4 +91,4 @@ if __name__ == "__main__":
     undisputed = part2(fabric, claims)
 
     if undisputed:
-        print(undisputed.tostr())
+        print(undisputed.id)
