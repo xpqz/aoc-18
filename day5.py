@@ -2,6 +2,7 @@
 day 5 of Advent of Code 2018
 by Stefan Kruger
 """
+import concurrent.futures
 import re
 import string
 
@@ -39,6 +40,11 @@ def read_data(filename="input5.data"):
         return f.read().splitlines()[0].rstrip()
 
 
+def proc(polymer):
+    polymer.reduce_full()
+    return polymer.size()
+
+
 if __name__ == "__main__":
     data = read_data()
     polymer = Polymer(data)
@@ -46,11 +52,16 @@ if __name__ == "__main__":
     print(f"Part1: {polymer.size()}")
 
     best = (len(data), None)
+
+    polymers = []
     for unit in list(string.ascii_lowercase):
         polymer = Polymer(data)
         polymer.mutate(unit)
-        polymer.reduce_full()
-        if polymer.size() < best[0]:
-            best = (polymer.size(), unit)
+        polymers.append(polymer)
 
-    print(f"Part2: {best[1]} -> {best[0]}")
+    min_size = len(data)
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        for size in executor.map(proc, polymers):
+            if size < min_size:
+                print(size)
+                min_size = size
