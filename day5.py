@@ -51,8 +51,6 @@ if __name__ == "__main__":
     polymer.reduce_full()
     print(f"Part1: {polymer.size()}")
 
-    best = (len(data), None)
-
     polymers = []
     for unit in list(string.ascii_lowercase):
         polymer = Polymer(data)
