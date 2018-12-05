@@ -1,19 +1,13 @@
-
+"""
+day 1 of Advent of Code 2018
+by Stefan Kruger
+"""
 from collections import Counter
 
 
 def read_data(filename="input1.data"):
     with open(filename) as f:
-        lines = f.read().splitlines()
-
-    return [
-        int(item)
-        for item in lines
-    ]
-
-
-def part1(data):
-    return sum(data)
+        return [int(item) for item in f.read().splitlines()]
 
 
 def part2(data):
@@ -31,5 +25,5 @@ def part2(data):
 
 if __name__ == "__main__":
     data = read_data()
-    print(part1(data))
+    print(sum(data))
     print(part2(data))

@@ -1,18 +1,17 @@
+"""
+day 1 of Advent of Code 2018
+by Stefan Kruger
+"""
 from collections import Counter
 
 
 def read_data(filename="input2.data"):
     with open(filename) as f:
-        lines = f.read().splitlines()
-
-    return lines
+        return f.read().splitlines()
 
 
 def check(item):
-    freq = Counter()
-    for letter in list(item):
-        freq[letter] += 1
-
+    freq = Counter(list(item))
     twos = 0
     threes = 0
     for frequency in freq.values():
@@ -56,8 +55,8 @@ def part2(data):
             if difflen_one(item1, item2):
                 result.add(frozenset([item1, item2]))
 
+    mystr = ""
     if len(result):
-        mystr = ""
         found = list(result)
         (item1, item2) = list(found[0])
         l1 = list(item1)
@@ -66,9 +65,7 @@ def part2(data):
             if l1[index] == l2[index]:
                 mystr += l1[index]
 
-        return mystr
-
-    return ''
+    return mystr
 
 
 if __name__ == "__main__":
