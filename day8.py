@@ -2,62 +2,55 @@
 day 8 of Advent of Code 2018
 by Stefan Kruger
 """
-from collections import defaultdict, deque
-from dataclasses import dataclass, field
-from typing import Any, List
-
-import json
-import re
 
 
-def read_data(filename="input8.data"):
-    with open(filename) as f:
-        return f.read().splitlines()[0]
+class DataProvider:
+    def __init__(self, data):
+        self.cursor = 0
+        self.data = data
+
+    @classmethod
+    def read_file(cls, filename="input8.data"):
+        with open(filename) as f:
+            return cls([int(item) for item in f.read().split(" ")])
+
+    def next(self):
+        self.cursor += 1
+        return self.data[self.cursor - 1]
 
 
-def parse_data(data):
-    return [
-        int(item)
-        for item in data.split(" ")
-    ]
+class Node:
+    def __init__(self, children, metadata):
+        self.children = children
+        self.metadata = metadata
 
+    @classmethod
+    def make_node(cls, data):
+        node_count = data.next()
+        meta_count = data.next()
 
-# read_node(numbers, 0, len(numbers))
+        children = []
+        metadata = []
 
-def read_node(numbers, start, end, acc=0):  # inclusive
+        for _ in range(node_count):
+            children.append(cls.make_node(data))
 
-    if not numbers or end <= start:
-        return acc
+        for _ in range(meta_count):
+            metadata.append(data.next())
 
-    child_nodes = numbers[start]
-    meta_count = numbers[start + 1]
+        return cls(children, metadata)
 
-    if child_nodes == 0:
-        # metadata is directly after meta_count, so can increase start
-        meta_items = numbers[start + 2:start + 2 + meta_count]
-        start = start + 2 + meta_count
-        new_end = end
-    else:
-        new_end = end - meta_count
-        start = start + 2
-        meta_items = numbers[new_end + 1:end + 1]
+    def meta_sum(self):
+        s = sum(self.metadata)
+        for c in self.children:
+            s += c.meta_sum()
 
-    # print(
-    #     f'\nNumbers: {numbers}\n'
-    #     f'Start-end: {start}-{end}\n'
-    #     f'Span: {numbers[start:end+1]}\n'
-    #     f'Metacount: {meta_count}\n'
-    #     f'Metaitems: {meta_items}\n'
-    #     f'Newend:{new_end}'
-    # )
-
-    return read_node(numbers, start, new_end, acc+sum(meta_items))
+        return s
 
 
 if __name__ == "__main__":
-    data = read_data()
-    # --- TEST DATA
-    data = "2 3 0 3 10 11 12 1 1 0 1 99 2 1 1 2"
-    # --- TEST DATA END
-    numbers = parse_data(data)
-    print(read_node(numbers, 0, len(numbers)-1))
+    data = DataProvider.read_file()
+    # data = DataProvider([2, 3, 0, 3, 10, 11, 12, 1, 1, 0, 1, 99, 2, 1, 1, 2])
+    tree = Node.make_node(data)
+
+    print(tree.meta_sum())
