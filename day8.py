@@ -47,10 +47,39 @@ class Node:
 
         return s
 
+    def value(self):
+        """
+        If a node has no child nodes, its value is the sum of its metadata
+        entries.
+
+        However, if a node does have child nodes, the metadata entries become
+        indexes which refer to those child nodes. A metadata entry of 1 refers
+        to the first child node, 2 to the second, 3 to the third, and so on.
+        The value of this node is the sum of the values of the child nodes
+        referenced by the metadata entries. If a referenced child node does not
+        exist, that reference is skipped. A child node can be referenced
+        multiple time and counts each time it is referenced. A metadata entry
+        of 0 does not refer to any child node.
+        """
+
+        if not self.children:
+            return sum(self.metadata)
+
+        v = 0
+        for index in self.metadata:
+            child = index - 1
+            if child < 0 or child >= len(self.children):
+                continue
+
+            v += self.children[child].value()
+
+        return v
+
 
 if __name__ == "__main__":
     data = DataProvider.read_file()
     # data = DataProvider([2, 3, 0, 3, 10, 11, 12, 1, 1, 0, 1, 99, 2, 1, 1, 2])
     tree = Node.make_node(data)
 
-    print(tree.meta_sum())
+    print(f'Part1: {tree.meta_sum()}')
+    print(f'Part2: {tree.value()}')
