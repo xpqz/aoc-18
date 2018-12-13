@@ -10,7 +10,7 @@ class DataProvider:
         self.data = data
 
     @classmethod
-    def read_file(cls, filename="input8.data"):
+    def read_file(cls, filename="data/input8.data"):
         with open(filename) as f:
             return cls([int(item) for item in f.read().split(" ")])
 

@@ -14,7 +14,7 @@ def weight(task):
     return FIXED_TASK_COST + ord(task) - ord("A") + 1
 
 
-def read_data(filename="input7.data"):
+def read_data(filename="data/input7.data"):
     with open(filename) as f:
         return f.read().splitlines()
 

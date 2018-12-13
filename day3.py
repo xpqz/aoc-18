@@ -57,7 +57,7 @@ class Fabric:
         return True
 
 
-def read_data(filename="input3.data"):
+def read_data(filename="data/input3.data"):
     """
     Load the raw datafile
     """

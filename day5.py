@@ -35,7 +35,7 @@ class Polymer:
             unit, '', self.composition, flags=re.IGNORECASE)
 
 
-def read_data(filename="input5.data"):
+def read_data(filename="data/input5.data"):
     with open(filename) as f:
         return f.read().splitlines()[0].rstrip()
 

@@ -1,44 +1,74 @@
 """
 day 9 of Advent of Code 2018
 by Stefan Kruger
+
+Solution using actual linked list to avoid O(n) insertion behaviour that
+cripples part 2.
 """
 
-from copy import copy
 from collections import Counter
+from dataclasses import dataclass
+from typing import Any
+
+
+@dataclass
+class Node:
+    item: int
+    left: Any = None
+    right: Any = None
+    start: bool = False
 
 
 class CircularList:
     def __init__(self):
-        self.data = [0]
-        self.cursor = 0
+        self.cursor = None
         self.scores = Counter()
 
-    def set_cursor_relative(self, delta):
-        self.cursor = (self.cursor + delta) % len(self.data)
+    def moveleft(self, steps):
+        for _ in range(steps):
+            self.cursor = self.cursor.left
+
+    def moveright(self, steps):
+        for _ in range(steps):
+            self.cursor = self.cursor.right
 
     def insert_at_cursor(self, item):
-        if self.cursor == 0:  # 0 is the start-end connection point
-            self.data.append(item)
-            self.cursor = len(self.data) - 1
-        else:
-            self.data.insert(self.cursor, item)
+        node = Node(item)
+
+        if self.cursor is None:
+            node.left = node
+            node.right = node
+            node.start = True
+            self.cursor = node
+            return
+
+        node.right = self.cursor
+        node.left = self.cursor.left
+
+        # Single node
+        if self.cursor.start and self.cursor.right.start:
+            self.cursor.right = node
+
+        self.cursor.left.right = node
+        self.cursor.left = node
+        self.cursor = node
 
     def remove_at_cursor(self):
-        item = self.data[self.cursor]
-        del_idx = self.cursor
-        if self.data[self.cursor] == len(self.data) - 1:
-            self.cursor = 0
-        del self.data[del_idx]
-
+        item = self.cursor.item
+        is_start = self.cursor.start
+        self.cursor.left.right = self.cursor.right
+        self.cursor.right.left = self.cursor.left
+        self.cursor = self.cursor.right
+        self.cursor.start = is_start
         return item
 
     def place(self, player, marble):
         if marble % 23 == 0:
-            self.set_cursor_relative(-7)
+            self.moveleft(7)
             removed = self.remove_at_cursor()
             self.scores[player] += marble + removed
         else:
-            self.set_cursor_relative(2)
+            self.moveright(2)
             self.insert_at_cursor(marble)
 
     def winner(self):
@@ -48,9 +78,11 @@ class CircularList:
 if __name__ == "__main__":
     circle = CircularList()
 
-    marble = 1
+    # Set the zero marble; does not belong to a player
+    circle.insert_at_cursor(0)
 
-    max_marble = 71588  # * 100   # Part2: takes 2h...
+    marble = 1
+    max_marble = 71588  # * 100   # Part2: times 100
     while marble < max_marble:
         for player in range(430):
             circle.place(player, marble)

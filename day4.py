@@ -138,7 +138,7 @@ class GuardRota:
         return best[1] * best[2]
 
 
-def read_data(filename="input4.data"):
+def read_data(filename="data/input4.data"):
     """
     Load the raw datafile
     """

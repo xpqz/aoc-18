@@ -194,7 +194,7 @@ class Area:
         return region_size
 
 
-def read_data(filename="input6.data"):
+def read_data(filename="data/input6.data"):
     with open(filename) as f:
         return f.read().splitlines()
 

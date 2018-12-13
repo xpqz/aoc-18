@@ -5,7 +5,7 @@ by Stefan Kruger
 from collections import Counter
 
 
-def read_data(filename="input2.data"):
+def read_data(filename="data/input2.data"):
     with open(filename) as f:
         return f.read().splitlines()
 
