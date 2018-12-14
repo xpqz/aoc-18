@@ -1,3 +1,6 @@
+import concurrent.futures
+
+
 def power_level(xpos, ypos, grid_serial):
     """
     (xpos, ypos) are in the 1,300 coordinate system.
@@ -17,40 +20,58 @@ class Grid:
             for x in range(300):
                 self.grid[y][x] = power_level(x + 1, y + 1, grid_serial)
 
-    def filter(self):
+    def filterN(self, filter_size):
         """
-        Convolve with square 3x3 2d summing filter. Filter must fall completely
-        inside the grid.
+        Square NxN 2d summing filter. Filter must fall completely inside the
+        grid.
         """
         filtered = [[0] * 300 for y in range(300)]
         for y in range(300):
             for x in range(300):
-                for fy in [y - 1, y, y + 1]:
-                    if fy < 0 or fy == 300:
+                for fy in range(y, y+filter_size):
+                    if fy >= 300:
                         continue
-                    for fx in [x - 1, x, x + 1]:
-                        if fx < 0 or fx == 300:
+                    for fx in range(x, x+filter_size):
+                        if fx >= 300:
                             continue
                         filtered[y][x] += self.grid[fy][fx]
 
         return filtered
 
-    def find_max(self):
-        filtered = self.filter()
+    def find_max(self, filter_size):
+        filtered = self.filterN(filter_size)
 
-        # Find max, skipping edges, where the filter will have gone outside the
-        # grid.
         best = (None, None, None)
-        for y in range(1, 299):
-            for x in range(1, 299):
+        for y in range(0, 300):
+            for x in range(0, 300):
                 if best[0] is None or filtered[y][x] > best[0]:
                     best = (filtered[y][x], x, y)
 
-        return best
+        return (best[0], best[1]+1, best[2]+1, filter_size)
+
+
+def proc(task):
+    return task[0].find_max(task[1])
 
 
 if __name__ == "__main__":
     puzzle_input = 7803
-    grid = Grid(puzzle_input)
 
-    print(f"Part1: {grid.find_max()}")
+    grid = Grid(puzzle_input)
+    best = grid.find_max(3)
+
+    print(f"Part1: {best}")
+
+    # for size in range(1, 301):
+    #     candidate = grid.find_max(size)
+    #     if candidate[0] > best[0]:
+    #         best = candidate
+
+    # print(f"Part2: {best}")
+
+    tasks = [(grid, i) for i in range(1, 301)]
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        for candidate in executor.map(proc, tasks):
+            if candidate[0] > best[0]:
+                best = candidate
+                print(best)
