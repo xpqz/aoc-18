@@ -6,7 +6,7 @@ def read_data(filename="data/input12.data"):
 def parse_data(lines):
     return (
         lines[0][len("initial state: "):],
-        [list(line[:5]) for line in lines[1:] if line[-1] == "#"]
+        [list(line[:5]) for line in lines[1:] if line and line[-1] == "#"]
     )
 
 
@@ -14,22 +14,7 @@ class Pots:
     def __init__(self, state):
         self.state = {i for i, p in enumerate(state) if p == "#"}
 
-    def to_string(self):
-        d = list(self.state)
-        if not d:
-            return ""
-
-        low, high = min(d), max(d)
-        s = ["."] * (high-low+1)
-        for pot in d:
-            s[pot - low] = "#" if pot in self.state else "."
-        return "".join(s)
-
     def matches(self, rule, centre):
-        """
-        Check if rule matches around the index pot.
-        This means check all indexes from [-2,-1,0,1,2] around centre.
-        """
         for i in range(-2, 3):
             pot = centre+i
             if pot in self.state and rule[i+2] == ".":
@@ -48,3 +33,15 @@ class Pots:
                         break
 
         self.state = next_gen
+
+
+if __name__ == "__main__":
+    (initial_state, rules) = parse_data(read_data())
+
+    pots = Pots(initial_state)
+    for gen in range(20):
+        pots.generate(rules)
+
+    plants = sum(pots.state)
+
+    print(f"Part1: {plants}")
