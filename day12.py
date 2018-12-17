@@ -1,3 +1,13 @@
+"""
+day 12 of Advent of Code 2018
+by Stefan Kruger
+
+Similar to a Conway's game-of-life cellular automata, in 1D.
+"""
+
+from collections import Counter
+
+
 def read_data(filename="data/input12.data"):
     with open(filename) as f:
         return f.read().splitlines()
@@ -45,3 +55,40 @@ if __name__ == "__main__":
     plants = sum(pots.state)
 
     print(f"Part1: {plants}")
+
+    # Part 2: 50000000000 generations...
+    #
+    # Too much to brute-force. Working hypothesis: check for emergent stable
+    # pattern. The two simplest potential options are:
+    #
+    # 1. Constant -- checksum converges to fixed value
+    # 2. Constant change -- checksum change converges to fixed value
+    #
+    # Pretty easy to confirm that that the second case is what we have:
+
+    pots = Pots(initial_state)
+    val = sum(pots.state)
+    for gen in range(100):
+        pots.generate(rules)
+        checksum = sum(pots.state)
+        print(f"Gen: {gen} checksum: {checksum} checksum diff: {checksum - val}")
+        val = checksum
+
+    # # gives:
+    # Gen: 92 checksum diff: 157
+    # Gen: 93 checksum diff: -61
+    # Gen: 94 checksum diff: 101
+    # Gen: 95 checksum diff: -5
+    # Gen: 96 checksum diff: 48
+    # Gen: 97 checksum diff: 48
+    # Gen: 98 checksum diff: 51
+    # Gen: 99 checksum diff: 51
+    # Gen: 100 checksum diff: 51
+    # Gen: 101 checksum diff: 51
+    # Gen: 102 checksum diff: 51  etc etc etc
+    #
+    # So we can conclude that after the 97th generation, every subsequent
+    # generation adds 51 to the value.
+
+    # Gen: 97 checksum: 6193 checksum diff: 48
+    print(f"Part2: {6193+(50000000000-98)*51}")
