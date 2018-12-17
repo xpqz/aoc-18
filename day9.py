@@ -4,6 +4,10 @@ by Stefan Kruger
 
 Solution using actual linked list to avoid O(n) insertion behaviour that
 cripples part 2.
+
+An alternative approach could have used a deque:
+
+https://stackoverflow.com/questions/39522787/time-complexity-of-random-access-in-deque-in-python
 """
 
 from collections import Counter
