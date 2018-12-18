@@ -11,6 +11,16 @@ TESTDATA = [
     list('  \\------/')
 ]
 
+TESTDATA2 = [
+    list('/>-<\\'),
+    list('|   |'),
+    list('| /<+-\\'),
+    list('| | | v'),
+    list('\\>+</ |'),
+    list('  |   ^'),
+    list('  \\<->/')
+]
+
 
 def test_sample_data():
     tracks = Map.from_lines(TESTDATA)
@@ -41,3 +51,14 @@ def test_sample_data():
         tracks.tick()
 
     assert err.value.args[0] == {"pos": (7, 3)}
+
+
+def test_sample_data2():
+    tracks = Map.from_lines(TESTDATA2)
+
+    assert len(tracks.carts) == 9
+
+    while len(tracks.carts) > 1:
+        tracks.tick(tracks.p2move)
+
+    assert (6, 4) in tracks.carts

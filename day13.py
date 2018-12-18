@@ -134,6 +134,34 @@ class Map:
         self.carts.pop(oldpos, None)
         self.carts[(cart.xpos, cart.ypos)] = cart
 
+    def p2move(self, cart):
+        # Check current node in case already mid-turn
+        self.check_turn(cart)
+
+        oldpos = cart.coord()
+
+        # Move cart along one step in its current direction
+        if cart.ch == "^":
+            cart.ypos = cart.ypos - 1
+        elif cart.ch == "v":
+            cart.ypos = cart.ypos + 1
+        elif cart.ch == ">":
+            cart.xpos = cart.xpos + 1
+        else:
+            cart.xpos = cart.xpos - 1
+
+        newpos = cart.coord()
+
+        self.carts.pop(oldpos, None)
+
+        # Did we run into someone?
+        if newpos in self.carts:
+            # Remove wreck
+            self.carts.pop(newpos, None)
+        else:
+            # Move the cart in our cart dict.
+            self.carts[newpos] = cart
+
     @classmethod
     def from_lines(cls, lines):
         nodes = {}
@@ -184,16 +212,20 @@ class Map:
 
         return cls(nodes, carts)
 
-    def tick(self):
+    def cart_order(self):
+        return sorted(self.carts.keys(), key=lambda k: (k[1], k[0]))  # <3
+
+    def tick(self, movefn=None):
         # Process carts from top-left to bottom-right.
-        row_order_carts = sorted(
-            self.carts.keys(),
-            key=lambda k: (k[1], k[0])
-        )  # <3 Python
+        if movefn is None:
+            movefn = self.move
+
+        row_order_carts = self.cart_order()
 
         for cartpos in row_order_carts:
-            cart = self.carts[cartpos]
-            self.move(cart)
+            cart = self.carts.get(cartpos, None)
+            if cart is not None:
+                movefn(cart)
 
 
 if __name__ == "__main__":
@@ -204,10 +236,19 @@ if __name__ == "__main__":
     coll_pos = None
     while True:
         try:
-            tracks.tick()
+            tracks.tick(tracks.move)
         except Collision as coll:
             coll_pos = coll.args[0]
             break
         tick += 1
 
     print(f"Part1: collision at {coll_pos} after {tick} ticks")
+
+    # Part2: run and remove wrecks after each collision until only one cart
+    # left
+    tracks = Map.from_lines(lines)
+
+    while len(tracks.carts) > 1:
+        tracks.tick(tracks.p2move)
+
+    print(f"Part2: survivor at {list(tracks.carts.keys())[0]}")
