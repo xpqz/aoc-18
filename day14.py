@@ -40,6 +40,8 @@ class ChocolateLab:
 if __name__ == "__main__":
     l = ChocolateLab()
 
-    for i in range(15):
+    target = 765071
+    while len(l.gen[l.current][0]) < target + 10:
         l.advance()
-        print(l.show())
+
+    print("".join([str(d) for d in l.gen[l.current][0][target:target+11]]))
