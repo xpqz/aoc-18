@@ -1,47 +1,52 @@
-from copy import copy
+"""
+day 14 of Advent of Code 2018
+by Stefan Kruger
+"""
+DIGITS = [
+    [0], [1], [2], [3], [4], [5], [6], [7], [8], [9],
+    [1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5],
+    [1, 6], [1, 7], [1, 8]
+]
 
 
 class ChocolateLab:
-    def __init__(self):
-        self.gen = {0: ([3, 7], [0, 1])}
-        self.current = 0
-
-    def generation(self, g=None):
-        if g is None:
-            g = self.current
-        return copy(self.gen[g][0])
-
-    def elves(self, g=None):
-        if g is None:
-            return self.gen[self.current][1]
-        return self.gen[g][1]
-
-    def show(self, g=None):
-        if g is None:
-            g = self.current
-        l = self.generation(g)
-        elves = self.elves(g)
-        l[elves[0]] = f"({l[elves[0]]})"
-        l[elves[1]] = f"[{l[elves[1]]}]"
-        return l
+    def __init__(self, target):
+        self.recipes = [3, 7]
+        self.elves = [0, 1]
+        self.ipattern = [int(l) for l in target]
 
     def advance(self):
-        recipes, elves = self.gen[self.current]
-        s = recipes[elves[0]] + recipes[elves[1]]
-        recipes.extend([int(d) for d in str(s)])
-        for e in [0, 1]:
-            advancement = (1 + recipes[elves[e]])
-            elves[e] = (elves[e] + advancement) % len(recipes)
+        pl = len(self.ipattern)
 
-        self.current += 1
-        self.gen[self.current] = (recipes, elves)
+        new_recipe = self.recipes[self.elves[0]] + self.recipes[self.elves[1]]
+        self.recipes.extend(DIGITS[new_recipe])
+        for e in [0, 1]:
+            advancement = (1 + self.recipes[self.elves[e]])
+            self.elves[e] = (self.elves[e] + advancement) % len(self.recipes)
+
+        # Check for match. As we may have added two recipes, we must check
+        # two potential matches.
+        if self.recipes[-pl:] == self.ipattern:
+            return (True, 0)
+
+        return (self.recipes[-pl-1:-1] == self.ipattern, 1)
 
 
 if __name__ == "__main__":
-    l = ChocolateLab()
-
-    target = 765071
-    while len(l.gen[l.current][0]) < target + 10:
+    pattern = "765071"
+    l = ChocolateLab(pattern)
+    while len(l.recipes) < int(pattern) + 10:
         l.advance()
 
-    print("".join([str(d) for d in l.gen[l.current][0][target:target+11]]))
+    p1data = l.recipes[int(pattern):int(pattern) + 11]
+
+    print(f"Part1: {''.join([str(d) for d in p1data])}")
+
+    # Part 2 -- takes 35s to run
+    l = ChocolateLab(pattern)
+    while True:
+        (match, offset) = l.advance()
+        if match:
+            pos = len(l.recipes) - len(pattern) - offset
+            print(f"Part2: {pos}")
+            break
