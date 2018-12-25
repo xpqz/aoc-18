@@ -1,5 +1,6 @@
-from astar import astar
+from copy import copy
 from dataclasses import dataclass
+import math
 from typing import Tuple
 
 
@@ -30,7 +31,7 @@ class Elf:
         return "E"
 
 
-def neighbours(coord):
+def adj(coord):
     return [
         (coord[0] - 1, coord[1]),  # E
         (coord[0] + 1, coord[1]),  # W
@@ -40,8 +41,7 @@ def neighbours(coord):
 
 
 class Cave:
-    def __init__(self, data, adjacency, elves, goblins, dim):
-        self.data = data
+    def __init__(self, adjacency, elves, goblins, dim):
         self.adjacency = adjacency
         self.elves = elves
         self.goblins = goblins
@@ -54,65 +54,101 @@ class Cave:
         if coord in self.goblins:
             return self.goblins[coord]
 
-        if self.data.get(coord, False):
+        if coord in self.adjacency:
             return "."
+
         return "#"
 
     def in_range(self, targets):
         """
         Find all open squares adjacent to an enemy.
         """
-        return [
+        return sorted([
             coord
             for pos in targets.keys()
-            for coord in neighbours(pos)
-            if self.at(coord) == "."
+            for coord in self.available_moves(pos)
+        ], key=lambda c: (c[1], c[0]))   # "read order", i.e. rows, then cols
+
+    def available_moves(self, coord):
+        return [
+            n
+            for n in adj(coord)
+            if n in self.adjacency
+            if n not in self.elves
+            if n not in self.goblins
         ]
 
-    def shortest_path(self, src, dest, visited=[], distances={}, predecessors={}):
+    def all_start_squares(self, prev, source, dest):
         """
-        Dijkstra's shortest path algorithm
-        http://www.gilles-bertrand.com/2014/03/dijkstra-algorithm-python-example-source-code-shortest-path.html
+        prev is an adjacency graph describing a set of paths from source to
+        dest of equal lengths. Return a list of all possible starting moves,
+        in row-col order.
         """
+        check = {dest}
+        start_squares = []
+        while check:
+            c = check.pop()
+            try:
+                for p in prev[c]:
+                    if p == source:
+                        start_squares.append(c)
+                    else:
+                        check.add(p)
+            except KeyError:
+                print(f"No preceding node for {c}")
 
-        if src == dest:
-            path = []
-            pred = dest
-            while pred is not None:
-                path.append(pred)
-                pred = predecessors.get(pred, None)
+        return sorted(start_squares, key=lambda x: (x[1], x[0]))
 
-            return path
+    def multiple_shortest_path(self, source, dest):
+        """
+        https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
+        """
+        Q = set(self.adjacency.keys())
 
-        if not visited:
-            distances[src] = 0
+        dist = {n: math.inf for n in Q}
+        prev = {}
 
-        for neighbor in self.adjacency[src]:
-            if neighbor not in visited:
-                # make left and up costlier?
-                new_distance = distances[src] + 1
-                if new_distance < distances.get(neighbor, float('inf')):
-                    distances[neighbor] = new_distance
-                    predecessors[neighbor] = src
+        dist[source] = 0
 
-        visited.append(src)
-        unvisited = {}
-        for k in self.adjacency:
-            if k not in visited:
-                unvisited[k] = distances.get(k, float('inf'))
-        x = min(unvisited, key=unvisited.get)
+        while Q:
+            nd = {l: dist[l] for l in Q}
+            u = min(nd, key=nd.get)
+            if u == dist:
+                break
+            Q.remove(u)
+            for v in self.available_moves(u):
+                alt = dist[u] + 1
+                if alt <= dist[v]:
+                    dist[v] = alt
+                    if v not in prev:
+                        prev[v] = set()
+                    prev[v].add(u)
 
-        return self.shortest_path(x, dest, visited, distances, predecessors)
+        # prev is now an adjacency graph describing all
+        # shortest path alternatives between source and
+        # dest. But we only care about the first step,
+        # so find all edges out of the start node and
+        # choose the one that's the "earliest" in row-col
+        # order.
+
+        start_options = self.all_start_squares(prev, source, dest)
+
+        if start_options:
+            square = start_options[0]
+            return square, dist[dest]
+
+        return None, None
 
     @classmethod
     def from_data(cls, lines):
-        data, elves, goblins = {}, {}, {}
+        elves, goblins = {}, {}
+        data = set()
         for y, row in enumerate(lines):
             for x, item in enumerate(row):
                 if item == "#":
                     continue
                 coord = (x, y)
-                data[coord] = True
+                data.add(coord)
                 if item == "G":
                     goblins[coord] = Goblin(pos=coord)
                 elif item == "E":
@@ -120,11 +156,11 @@ class Cave:
 
         # build adjacency graph
         graph = {
-            coord: {n for n in neighbours(coord) if n in data}
-            for coord in data.keys()
+            coord: {n for n in adj(coord) if n in data}
+            for coord in data
         }
 
-        return cls(data, graph, elves, goblins, (x+1, y+1))
+        return cls(graph, elves, goblins, (x+1, y+1))
 
     def display(self):
         for r in self.to_str():
@@ -132,22 +168,7 @@ class Cave:
 
     def to_str(self):
         return [
-            [
-                str(self.at((x, y)))
-                for x in range(self.dim[0])
-            ]
-            for y in range(self.dim[1])
-        ]
-
-    def to_maze(self):
-        """
-        Show squares only as 0 (empty) or 1 (non-empty)
-        """
-        return [
-            [
-                0 if self.at((x, y)) == "." else 1
-                for x in range(self.dim[0])
-            ]
+            [str(self.at((x, y))) for x in range(self.dim[0])]
             for y in range(self.dim[1])
         ]
 
@@ -157,13 +178,76 @@ class Cave:
             s[y][x] = ch
         return s
 
+    def move(self, start):
+        """
+        Move piece at start one step along the shortest path to an attackable
+        position. If already in attacking position, piece won't move. Returns
+        True if piece moved.
+        """
+        my_team = self.goblins
+        enemies = self.elves
+        if start in self.elves:
+            my_team = self.elves
+            enemies = self.goblins
+
+        # If I'm in an attacking position, I can't move.
+        for n in adj(start):
+            if n in enemies:
+                return False
+
+        targets = self.in_range(enemies)
+        best = (math.inf, None)
+
+        for target in targets:
+            square, cost = self.multiple_shortest_path(start, target)
+            if square and cost < best[0]:
+                best = (cost, square)
+
+        if best[1]:
+            next_square = best[1]
+            piece = my_team.pop(start)
+            piece.pos = next_square
+            my_team[next_square] = piece
+            return True
+
+        return False
+
+    def pieces(self):
+        """
+        Return coordinates of all elves and goblins in "read order"
+        """
+        p = list(self.elves.keys())
+        p.extend(list(self.goblins.keys()))
+        return sorted(p, key=lambda k: (k[1], k[0]))
+
 
 if __name__ == "__main__":
     lines = read_data()
 
     cave = Cave.from_data(lines)
+    cave.display()
 
-    path = cave.shortest_path((4, 10), (21, 14))
+    goblins, elves = {}
+    for turn in range(5):
+        p = cave.pieces()
+        cave.move(p[0])
+        cave.display()
 
-    for r in cave.overlay(path, "+"):
-        print(''.join(r))
+    elf = (30, 13)
+    cave.move(elf)
+    cave.display()
+    # for r in cave.overlay(best[1], "+"):
+    #     print(''.join(r))
+
+    # print(f"Chosen target at {best[1]}")
+
+    # path2 = cave.shortest_path_nr((4, 10), (21, 14))
+
+    # path = [(5, 10), (6, 10), (7, 10), (8, 10), (9, 10), (10, 10), (10, 11), (11, 11), (12, 11), (13, 11),
+    #         (14, 11), (15, 11), (16, 11), (17, 11), (18, 11), (19, 11), (19, 12), (20, 12), (20, 13), (21, 13), (21, 14)]
+
+    # for r in cave.overlay(a, "+"):
+    #     print(''.join(r))
+
+    # print(path)
+    # print(path2)
