@@ -12,9 +12,11 @@ def read_data(filename="data/input15.data"):
 @dataclass
 class Goblin:
     pos: Tuple[int, int]
+    hitpoints: int = 200
+    attack: int = 3
 
     def __repr__(self):
-        return f"<Goblin pos:{self.pos}>"
+        return f"<Goblin pos:{self.pos} hp:{self.hitpoints}>"
 
     def __str__(self):
         return "G"
@@ -23,9 +25,11 @@ class Goblin:
 @dataclass
 class Elf:
     pos: Tuple[int, int]
+    hitpoints: int = 200
+    attack: int = 3
 
     def __repr__(self):
-        return f"<Elf pos:{self.pos}>"
+        return f"<Elf pos:{self.pos} hp:{self.hitpoints}>"
 
     def __str__(self):
         return "E"
@@ -67,7 +71,36 @@ class Cave:
             coord
             for pos in targets.keys()
             for coord in self.available_moves(pos)
-        ], key=lambda c: (c[1], c[0]))   # "read order", i.e. rows, then cols
+        ], key=lambda c: (c[1], c[0]))  # "read order", i.e. rows, then cols
+
+    def attacking(self, targets):
+        """
+        List all team members currently in an attacking position.
+        """
+        own_team = self.goblins
+        if targets == self.goblins:
+            own_team = self.elves
+
+        return [
+            coord
+            for pos in targets.keys()
+            for coord in adj(pos)
+            if coord in own_team
+        ]
+
+    def game_over(self):
+        """
+        Game is over if there are no attacking squares available, and no
+        current attacks in progress.
+        """
+        if not self.goblins or not self.elves:
+            return True
+
+        for targets in [self.goblins, self.elves]:
+            if self.in_range(targets) or self.attacking(targets):
+                return False
+
+        return True
 
     def available_moves(self, coord):
         return [
@@ -94,8 +127,8 @@ class Cave:
                         start_squares.append(c)
                     else:
                         check.add(p)
-            except KeyError:
-                print(f"No preceding node for {c}")
+            except KeyError:  # No uninpeded path; skip
+                break
 
         return sorted(start_squares, key=lambda x: (x[1], x[0]))
 
@@ -182,20 +215,27 @@ class Cave:
         """
         Move piece at start one step along the shortest path to an attackable
         position. If already in attacking position, piece won't move. Returns
-        True if piece moved.
+        position after move (may be the start pos).
         """
-        my_team = self.goblins
-        enemies = self.elves
         if start in self.elves:
             my_team = self.elves
             enemies = self.goblins
+        elif start in self.goblins:
+            my_team = self.goblins
+            enemies = self.elves
+        else:
+            return start
 
         # If I'm in an attacking position, I can't move.
         for n in adj(start):
             if n in enemies:
-                return False
+                return start
 
         targets = self.in_range(enemies)
+
+        if not targets:
+            return start
+
         best = (math.inf, None)
 
         for target in targets:
@@ -208,6 +248,38 @@ class Cave:
             piece = my_team.pop(start)
             piece.pos = next_square
             my_team[next_square] = piece
+            return next_square
+
+        return start
+
+    def attack(self, pos):
+        """
+        If pos is in an attacking position, execute the attack. Return True if
+        an attack was made, False if not.
+        """
+        if pos in self.elves:
+            my_team = self.elves
+            enemies = self.goblins
+        elif pos in self.goblins:
+            my_team = self.goblins
+            enemies = self.elves
+        else:
+            return False
+
+        # Find any attackable neighbours, ordered by hitpoints in reading order
+        attackable = sorted(
+            [enemies[n] for n in adj(pos) if n in enemies],
+            key=lambda x: (x.hitpoints, x.pos[1], x.pos[0])
+        )
+
+        perpetrator = my_team[pos]
+        if attackable:
+            victim = attackable[0]
+            victim.hitpoints -= perpetrator.attack
+
+            if victim.hitpoints <= 0:
+                enemies.pop(victim.pos)
+
             return True
 
         return False
