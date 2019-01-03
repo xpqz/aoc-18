@@ -1,6 +1,6 @@
 import pytest  # type: ignore
 
-from day15 import Cave, Elf, Goblin
+from day15l import Cave, Elf, Goblin
 
 
 MAP1 = [
@@ -22,9 +22,9 @@ MAP2 = [
     list('############.##.....G..E...#####'),
     list('###########G.##...GG......######'),
     list('#..####G##..G##..G.#......######'),
-    list('#...S......#............#.######'),
+    list('#...G......#............#.######'),
     list('#.......#....G.......G.##..#...#'),
-    list('#....XG.......#####...####...#.#'),
+    list('#.....G.......#####...####...#.#'),
     list('#.....G..#...#######..#####...E#'),
     list('#.##.....G..#########.#######..#'),
     list('#........G..#########.#######E##'),
@@ -100,6 +100,19 @@ def test_multiple_shortest_paths_example():
     c.move((2, 1))
     assert set(c.elves.keys()) == {(3, 1)}
 
+def test_multiple_shortest_paths_example_():
+    c = Cave.from_data(MAP4)
+    paths = c.bfs_paths((2,1), (4, 2))
+    
+    best = None
+    for p in paths:
+        if best is None:
+            best = len(p)
+        if len(p) > best:
+            break
+        print(p)
+
+
 
 def test_multiple_shortest_paths_example2():
     c = Cave.from_data(MAP3)
@@ -160,6 +173,34 @@ def test_movement():
         assert set(state.goblins.keys()) == set(result.goblins.keys())
         assert set(state.elves.keys()) == set(result.elves.keys())
 
+TEST_MAP = [
+    list('##########################'),
+    list('#######.....#########....#'),
+    list('#######...G..#######G....#'),
+    list('#######...C...#####.EG...#'),
+    list('###.#....#.....E.E...EG..#'),
+    list('###......#......E.....E..#'),
+    list('##...........#.......E...#'),
+    list('##.......................#'),
+    list('##########################')
+]
+
+def test_movement2():
+    state = Cave.from_data(TEST_MAP)
+    # state.move((17, 4))
+    # assert (17, 5) in state.elves
+
+    paths = state.bfs_paths((17,14), (11,2))
+    
+    best = None
+    for p in paths:
+        if best is None:
+            best = len(p)
+        if len(p) > l:
+            break
+
+        print(p)
+        
 
 COMBAT_MAP = [
     list('#######'),
@@ -245,6 +286,46 @@ GAME_OVER = [
     list('#######')
 ]
 
+BAD_MOVE_TEST = [
+    (list('################################'), []),
+    (list('#########....#..#####.......####'), []),
+    (list('###########.......###..##..#####'), []),
+    (list('###########.....#.###......#####'), []),
+    (list('###############.#...#.......####'), []),
+    (list('###############..#.G...G.....###'), [200, 197]),
+    (list('############.##...#.G..G...#####'), [200, 200]),
+    (list('############.##.........G..#####'), [182]),
+    (list('###########..##...G....GE.######'), [200, 110, 26]),
+    (list('#..####.##...##....#....GE######'), [125, 200]),
+    (list('#..........#............#.######'), []),
+    (list('#.......#..............##..#...#'), []),
+    (list('#..........G..#####...####...#.#'), [200]),
+    (list('#........#G..#######..#####....#'), [200]),
+    (list('#.##........#########.#######..#'), []),
+    (list('#...........#########.#######.##'), []),
+    (list('####........#########.##########'), []),
+    (list('##.#........#########.##########'), []),
+    (list('##..........#########.##########'), []),
+    (list('##.........G.#######EG##########'), [200, 140, 80]),
+    (list('#....#......G.#####..E##########'), [200, 200]),
+    (list('#......#.......GE.....##########'), [143, 8]),
+    (list('###.#.........GE.....###########'), [200, 188]),
+    (list('###............GE....###.#######'), [89, 167]),
+    (list('####..........GE......#....#####'), [200, 2]),
+    (list('####.####......G####......######'), [200]),
+    (list('####..#####.....####......######'), []),
+    (list('#############..#####......######'), []),
+    (list('#####################.....######'), []),
+    (list('#####################..#..######'), []),
+    (list('#####################.##########'), []),
+    (list('################################'), [])
+]
+
+# def test_strange_move():
+#     state = Cave.from_data_(BAD_MOVE_TEST)
+#     state.display_full()
+#     state.execute_turn()
+#     state.display_full()
 
 def test_game_over():
     state = Cave.from_data(GAME_OVER)
@@ -268,17 +349,17 @@ def test_combat():
 
 
 @pytest.mark.parametrize(
-    "combat_map,full_turns",
+    "combat_map,full_turns,hp_remaining",
     [
-        (COMBAT_MAP, 47),
-        (COMBAT_MAP2, 37),
-        (COMBAT_MAP3, 46),
-        (COMBAT_MAP4, 35),
-        (COMBAT_MAP5, 54),
-        (COMBAT_MAP6, 20)
+        (COMBAT_MAP, 47, 590),
+        (COMBAT_MAP2, 37, 982),
+        (COMBAT_MAP3, 46, 859),
+        (COMBAT_MAP4, 35, 793),
+        (COMBAT_MAP5, 54, 536),
+        (COMBAT_MAP6, 20, 937)
     ]
 )
-def test_combat_full(combat_map, full_turns):
+def test_combat_full(combat_map, full_turns, hp_remaining):
     state = Cave.from_data(combat_map)
 
     turns = 1
@@ -293,8 +374,10 @@ def test_combat_full(combat_map, full_turns):
         if game_over:
             break
         turns += 1
-        print(turns)
 
     # state.display()
 
     assert turns-1 == full_turns
+
+    hp = state.hitpoints_remaining()
+    assert hp["goblins"] + hp["elves"] == hp_remaining
