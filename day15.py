@@ -1,52 +1,8 @@
 from copy import copy
-from heapq import heapify, heappush, heappop
 from dataclasses import dataclass
-import itertools
 import math
 from typing import Tuple
 
-REMOVED = '<removed-node>'  # Placeholder for a removed node
-
-class PriorityQueue:
-    """
-    Straight from the python docs at 
-    https://docs.python.org/3/library/heapq.html#priority-queue-implementation-notes
-    """
-    def __init__(self):
-        self.pq = []                         # List of entries arranged in a heap
-        self.entry_finder = {}               # Mapping of nodes to entries
-        self.counter = itertools.count()     # Unique sequence count
-
-    def add(self, node, priority=math.inf):
-        """
-        Add a new node or update the priority of an existing node
-        """
-        if node in self.entry_finder:
-            self.remove(node)
-
-        count = next(self.counter)
-        entry = [priority, count, node]
-        self.entry_finder[node] = entry
-        heappush(self.pq, entry)
-
-    def remove(self, node):
-        """
-        Mark an existing node as REMOVED.  Raise KeyError if not found.
-        """
-        entry = self.entry_finder.pop(node)
-        entry[-1] = REMOVED
-
-    def pop(self):
-        """
-        Remove and return the lowest priority node. Raise KeyError if empty.
-        """
-        while self.pq:
-            priority, count, node = heappop(self.pq)
-            if node is not REMOVED:
-                del self.entry_finder[node]
-                return node
-
-        raise KeyError('pop from an empty priority queue')
 
 def read_data(filename="data/input15.data"):
     with open(filename) as f:
@@ -181,67 +137,6 @@ class Cave:
                 break
 
         return sorted(start_squares, key=lambda x: (x[1], x[0]))
-
-    def bfs_paths(self, source, dest):
-        queue = [(source, [])]
-        while queue:
-            (node, path) = queue.pop(0)
-            for next in set(self.available_moves(node)) - set(path):
-                if next == dest:
-                    yield path + [next]
-                else:
-                    queue.append((next, path + [next]))
-
-    def multiple_shortest_path_hq(self, source, dest):
-        """
-        https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm#Using_a_priority_queue
-        """
-        Q = PriorityQueue()
-        for n in self.adjacency.keys():
-            if n != source:
-                Q.add(n)
-        Q.add(source, priority=0)
-
-        dist = {n: math.inf for n in self.adjacency.keys()}
-        dist[source] = 0
-
-        prev = {}
-
-        print(f"{source} -> {dest}")
-
-        while Q.pq:
-            u = Q.pop()
-            if u == dist:
-                break
-
-            for v in self.available_moves(u):
-                alt = dist[u] + 1
-                # print(u, v)
-                if alt <= dist[v]:
-                    dist[v] = alt
-                    Q.remove(v)
-                    Q.add(v, priority=alt)
-                    if v not in prev:
-                        prev[v] = set()
-                    prev[v].add(u)
-                    
-                    
-
-        # prev is now an adjacency graph describing all
-        # shortest path alternatives between source and
-        # dest. But we only care about the first step,
-        # so find all edges out of the start node and
-        # choose the one that's the "earliest" in row-col
-        # order.
-
-        start_options = self.all_start_squares(prev, source, dest)
-
-        if start_options:
-            square = start_options[0]
-            return square, dist[dest]
-
-        return None, None
-
     
 
     def multiple_shortest_path(self, source, dest):
@@ -334,10 +229,6 @@ class Cave:
 
         return cls(graph, elves, goblins, (x+1, y+1))
 
-    def display(self):
-        for r in self.to_str():
-            print(''.join(r))
-
     def display_full(self):
         for y in range(self.dim[1]):
             hp = []
@@ -391,7 +282,6 @@ class Cave:
         best = (math.inf, None)
 
         for target in targets:
-            # square, cost = self.multiple_shortest_path(start, target)
             square, cost = self.multiple_shortest_path(start, target)
             if square and cost < best[0]:
                 best = (cost, square)
@@ -463,20 +353,18 @@ class Cave:
 if __name__ == "__main__":
     lines = read_data()
     cave = Cave.from_data(lines)
-    cave.display()
+    cave.display_full()
     turns = 1
     game_over = False
     while not game_over:
-        print(turns)
         game_over = cave.execute_turn()
         if game_over:
             break
-        cave.display_full()
-
         turns += 1
 
-    cave.display()
+    cave.display_full()
+    hp = sum(cave.hitpoints_remaining().values())
 
-    print(f"{(turns-1)} {cave.hitpoints_remaining()}")
+    print(f"Part1: {(turns-1)*hp}")
 
 

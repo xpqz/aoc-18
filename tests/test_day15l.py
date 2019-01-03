@@ -1,6 +1,6 @@
 import pytest  # type: ignore
 
-from day15 import Cave, Elf, Goblin
+from day15l import Cave, Elf, Goblin
 
 
 MAP1 = [
@@ -100,6 +100,20 @@ def test_multiple_shortest_paths_example():
     c.move((2, 1))
     assert set(c.elves.keys()) == {(3, 1)}
 
+def test_multiple_shortest_paths_example_():
+    c = Cave.from_data(MAP4)
+    paths = c.bfs_paths((2,1), (4, 2))
+    
+    best = None
+    for p in paths:
+        if best is None:
+            best = len(p)
+        if len(p) > best:
+            break
+        print(p)
+
+
+
 def test_multiple_shortest_paths_example2():
     c = Cave.from_data(MAP3)
     c.move((7, 1))
@@ -170,6 +184,22 @@ TEST_MAP = [
     list('##.......................#'),
     list('##########################')
 ]
+
+def test_movement2():
+    state = Cave.from_data(TEST_MAP)
+    # state.move((17, 4))
+    # assert (17, 5) in state.elves
+
+    paths = state.bfs_paths((17,14), (11,2))
+    
+    best = None
+    for p in paths:
+        if best is None:
+            best = len(p)
+        if len(p) > l:
+            break
+
+        print(p)
         
 
 COMBAT_MAP = [
