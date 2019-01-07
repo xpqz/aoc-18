@@ -88,13 +88,6 @@ def test_sample_data1(data, elves, goblins):
         assert g in c.goblins
 
 
-def test_range_finder():
-    c = Cave.from_data(MAP1)
-    r = c.in_range(c.goblins)
-
-    assert set(r) == {(3, 1), (5, 1), (2, 2), (5, 2), (1, 3), (3, 3)}
-
-
 def test_multiple_shortest_paths_example():
     c = Cave.from_data(MAP4)
     c.move((2, 1))
@@ -256,47 +249,6 @@ GAME_OVER = [
     list('#######')
 ]
 
-BAD_MOVE_TEST = [
-    (list('################################'), []),
-    (list('#########....#..#####.......####'), []),
-    (list('###########.......###..##..#####'), []),
-    (list('###########.....#.###......#####'), []),
-    (list('###############.#...#.......####'), []),
-    (list('###############..#.G...G.....###'), [200, 197]),
-    (list('############.##...#.G..G...#####'), [200, 200]),
-    (list('############.##.........G..#####'), [182]),
-    (list('###########..##...G....GE.######'), [200, 110, 26]),
-    (list('#..####.##...##....#....GE######'), [125, 200]),
-    (list('#..........#............#.######'), []),
-    (list('#.......#..............##..#...#'), []),
-    (list('#..........G..#####...####...#.#'), [200]),
-    (list('#........#G..#######..#####....#'), [200]),
-    (list('#.##........#########.#######..#'), []),
-    (list('#...........#########.#######.##'), []),
-    (list('####........#########.##########'), []),
-    (list('##.#........#########.##########'), []),
-    (list('##..........#########.##########'), []),
-    (list('##.........G.#######EG##########'), [200, 140, 80]),
-    (list('#....#......G.#####..E##########'), [200, 200]),
-    (list('#......#.......GE.....##########'), [143, 8]),
-    (list('###.#.........GE.....###########'), [200, 188]),
-    (list('###............GE....###.#######'), [89, 167]),
-    (list('####..........GE......#....#####'), [200, 2]),
-    (list('####.####......G####......######'), [200]),
-    (list('####..#####.....####......######'), []),
-    (list('#############..#####......######'), []),
-    (list('#####################.....######'), []),
-    (list('#####################..#..######'), []),
-    (list('#####################.##########'), []),
-    (list('################################'), [])
-]
-
-# def test_strange_move():
-#     state = Cave.from_data_(BAD_MOVE_TEST)
-#     state.display_full()
-#     state.execute_turn()
-#     state.display_full()
-
 def test_game_over():
     state = Cave.from_data(GAME_OVER)
     assert state.game_over()
@@ -334,20 +286,12 @@ def test_combat_full(combat_map, full_turns, hp_remaining):
 
     turns = 1
     game_over = False
-    while turns < full_turns + 3:
-        for piece in state.pieces():
-            if state.game_over():
-                game_over = True
-                break
-            new_pos = state.move(piece)
-            state.attack(new_pos)
+    while not game_over and turns < full_turns + 3:
+        state.display()
+        game_over, _, _ = state.execute_turn()
         if game_over:
             break
         turns += 1
 
-    # state.display()
-
     assert turns-1 == full_turns
-
-    hp = state.hitpoints_remaining()
-    assert hp["goblins"] + hp["elves"] == hp_remaining
+    assert state.hitpoints_remaining() == hp_remaining

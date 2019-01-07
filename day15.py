@@ -1,4 +1,3 @@
-from copy import copy
 from collections import deque
 from dataclasses import dataclass
 import math
@@ -37,6 +36,9 @@ class Elf:
 
 
 def adj(p):
+    """
+    Generate the four neighbouring coordinates as a set.
+    """
     return {(p[0] - 1, p[1]), (p[0] + 1, p[1]), (p[0], p[1] - 1), (p[0], p[1] + 1)}
 
 
@@ -61,7 +63,7 @@ class Cave:
 
     def game_over(self):
         """
-        Game is over if one creature type is extinct
+        Game is over if one creature type is extinct.
         """
         return not self.goblins or not self.elves
 
@@ -74,6 +76,7 @@ class Cave:
     def valid_moves(self, p, my_team):
         """
         A valid move from p is either a step to an adjacent empty square or an attack.
+        Note: must return squares in "read order".
         """
         return sorted([
             n 
@@ -83,21 +86,33 @@ class Cave:
         ], key=lambda x: (x[1], x[0]))
     
     def find_move(self, start, my_team, enemies):
+        """
+        Breadth-first search generator. Relies on self.valid_moves() returning adjacent 
+        squares in "read order".
+
+        Search until we find an attackable position. This defines the max depth necessary
+        to search - there may be further paths of equal (or lower) length, but we can prune
+        the search space at this depth.
+        """
         queue = deque([(start, [])])
         max_depth = math.inf
-        visited = {start}
+        visited = {start}    # We only need to consider each square once.
         while queue:
             node, path = queue.popleft()
+
+            # Consider available neighbouring squares in "read order" (y-then-x)
             for n in self.valid_moves(node, my_team):
                 if n in visited:
                     continue
                 visited.add(n)
+
+                # Prune if we've already found a shallower attacking square.
                 if len(path) <= max_depth:    
-                    if n in enemies:
+                    if n in enemies:  # Found an attacking square!
                         max_depth = len(path)
                         yield path
                     else:
-                        queue.append((n, path + [n]))
+                        queue.append((n, path + [n]))  # Keep track of the path so far
                 elif max_depth < math.inf:
                     return
 
@@ -191,17 +206,14 @@ class Cave:
             return start
 
         paths = list(self.find_move(start, my_team, enemies))
-
         if not paths:
             return start
 
-        next_square = sorted(list({path[0] for path in paths}), key=lambda x: (x[1], x[0]))[0]
-
         piece = my_team.pop(start)
-        piece.pos = next_square
-        my_team[next_square] = piece
+        piece.pos = paths[0][0]
+        my_team[paths[0][0]] = piece
 
-        return next_square
+        return paths[0][0]
 
     def attack(self, pos):
         """
@@ -272,7 +284,8 @@ if __name__ == "__main__":
 
     print(f"Part1: {(turns-1)*hp}")
 
-    # Part2: Vary the Elves attacking strength until no Elves are lost.
+    # Part2: Vary the Elves attacking strength until no Elves are lost. This is pretty fast as is
+    # but could be faster with a binary search.
 
     for ap in range(4, 200):
         cave = Cave.from_data(lines)
