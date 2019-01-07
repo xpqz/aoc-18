@@ -206,12 +206,12 @@ class Cave:
     def attack(self, pos):
         """
         If pos is in an attacking position, execute the attack. Return True if
-        an attack was made, False if not. 
+        an kill was made, False if not. 
         """
 
         # Sanity check: we may have already been killed.
         if pos not in self.goblins and pos not in self.elves: 
-            return False
+            return False, None
 
         my_team, enemies = self.teams(pos)
 
@@ -228,10 +228,9 @@ class Cave:
 
             if victim.hitpoints <= 0:
                 enemies.pop(victim.pos)
+                return True, enemies
 
-            return True
-
-        return False
+        return False, None
 
     def pieces(self):
         """
@@ -241,19 +240,22 @@ class Cave:
         p.extend(list(self.goblins.keys()))
         return sorted(p, key=lambda k: (k[1], k[0]))
 
-    def execute_turn(self):
+    def execute_turn(self, shortcircuit=None):
         moved = set()
         game_over = False
+        killed, team = False, None
         for piece in self.pieces():
             if self.game_over():
                 game_over = True
                 break
             if piece not in moved:
                 new_pos = self.move(piece)
-                self.attack(new_pos)
+                killed, team = self.attack(new_pos)
                 moved.add(new_pos)
+                if killed and shortcircuit == team:
+                    break
 
-        return game_over
+        return game_over, killed, team
 
 if __name__ == "__main__":
     lines = read_data()
@@ -261,7 +263,7 @@ if __name__ == "__main__":
     turns = 1
     game_over = False
     while not game_over:
-        game_over = cave.execute_turn()
+        game_over, _, _ = cave.execute_turn()
         if game_over:
             break
         turns += 1
@@ -269,6 +271,25 @@ if __name__ == "__main__":
     hp = cave.hitpoints_remaining()
 
     print(f"Part1: {(turns-1)*hp}")
+
+    # Part2: Vary the Elves attacking strength until no Elves are lost.
+
+    for ap in range(4, 200):
+        cave = Cave.from_data(lines)
+        for elf in cave.elves.values():
+            elf.attack = ap
+        elf_count_before = len(cave.elves)
+        turns = 1
+        game_over = False
+        while not game_over:
+            game_over, killed, team = cave.execute_turn(shortcircuit=cave.elves)
+            if killed and team == cave.elves or game_over:
+                break
+            turns += 1
+        if game_over:
+            hp = cave.hitpoints_remaining()
+            print(f"Part2: {(turns-1)*hp} Elves win with attackpoints at {ap} after {turns-1}")
+            break            
 
     
 
