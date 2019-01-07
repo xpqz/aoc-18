@@ -1,3 +1,10 @@
+"""
+day 15 of Advent of Code 2018
+by Stefan Kruger
+
+This was very awkward to get right...
+"""
+
 from collections import deque
 from dataclasses import dataclass
 import math
@@ -205,10 +212,13 @@ class Cave:
         if not self.first_move_available(start):
             return start
 
+        # Find shortest path(s) to attacking square. If there are multiple, we can
+        # rely on the correctly ordered one being the first.
         paths = list(self.find_move(start, my_team, enemies))
         if not paths:
             return start
 
+        # We only care about the first square in the first path.
         piece = my_team.pop(start)
         piece.pos = paths[0][0]
         my_team[paths[0][0]] = piece
@@ -217,8 +227,8 @@ class Cave:
 
     def attack(self, pos):
         """
-        If pos is in an attacking position, execute the attack. Return True if
-        an kill was made, False if not. 
+        If pos is in an attacking position, execute the attack. Returns (True, enemy_team) 
+        if a kill was made, (False, None) if not. 
         """
 
         # Sanity check: we may have already been killed.
@@ -253,6 +263,11 @@ class Cave:
         return sorted(p, key=lambda k: (k[1], k[0]))
 
     def execute_turn(self, shortcircuit=None):
+        """
+        Do a move & attack for each piece, in "read order". Option to break out
+        of the turn early if a member of the 'shortcircuit' team is killed, which
+        is needed for part 2.
+        """
         moved = set()
         game_over = False
         killed, team = False, None
