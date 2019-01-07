@@ -1,4 +1,5 @@
 from copy import copy
+from collections import deque
 from dataclasses import dataclass
 import math
 from typing import Tuple
@@ -35,13 +36,8 @@ class Elf:
         return "E"
 
 
-def adj(coord):
-    return [
-        (coord[0] - 1, coord[1]),  # E
-        (coord[0] + 1, coord[1]),  # W
-        (coord[0], coord[1] - 1),  # N
-        (coord[0], coord[1] + 1),  # S
-    ]
+def adj(p):
+    return {(p[0] - 1, p[1]), (p[0] + 1, p[1]), (p[0], p[1] - 1), (p[0], p[1] + 1)}
 
 
 class Cave:
@@ -63,121 +59,48 @@ class Cave:
 
         return "#"
 
-    def in_range(self, targets):
-        """
-        Find all open squares adjacent to an enemy.
-        """
-        return sorted([
-            coord
-            for pos in targets.keys()
-            for coord in self.available_moves(pos)
-        ], key=lambda c: (c[1], c[0]))  # "read order", i.e. rows, then cols
-
-    def attacking(self, targets):
-        """
-        List all team members currently in an attacking position.
-        """
-        own_team = self.goblins
-        if targets == self.goblins:
-            own_team = self.elves
-
-        return [
-            coord
-            for pos in targets.keys()
-            for coord in adj(pos)
-            if coord in own_team
-        ]
-
     def game_over(self):
         """
-        Game is over if there are no attacking squares available, and no
-        current attacks in progress.
+        Game is over if one creature type is extinct
         """
-        if not self.goblins or not self.elves:
-            return True
-
-        for targets in [self.goblins, self.elves]:
-            if self.in_range(targets) or self.attacking(targets):
-                return False
-
-        return True
+        return not self.goblins or not self.elves
 
     def hitpoints_remaining(self):
-        return {
-            "goblins": sum([i.hitpoints for i in self.goblins.values()]),
-            "elves": sum([i.hitpoints for i in self.elves.values()])
-        }
+        return (
+            sum([i.hitpoints for i in self.goblins.values()]) + 
+            sum([i.hitpoints for i in self.elves.values()])
+        )
 
-    def available_moves(self, coord):
-        return [
-            n
-            for n in adj(coord)
-            if n in self.adjacency
-            if n not in self.elves
-            if n not in self.goblins
-        ]
-
-    def all_start_squares(self, prev, source, dest):
+    def valid_moves(self, p, my_team):
         """
-        prev is an adjacency graph describing a set of paths from source to
-        dest of equal lengths. Return a list of all possible starting moves,
-        in row-col order.
+        A valid move from p is either a step to an adjacent empty square or an attack.
         """
-        check = {dest}
-        start_squares = []
-        while check:
-            c = check.pop()
-            try:
-                for p in prev[c]:
-                    if p == source:
-                        start_squares.append(c)
-                    else:
-                        check.add(p)
-            except KeyError:  # No uninpeded path; skip
-                break
-
-        return sorted(start_squares, key=lambda x: (x[1], x[0]))
+        return sorted([
+            n 
+            for n in adj(p) 
+            if n in self.adjacency 
+            if n not in my_team
+        ], key=lambda x: (x[1], x[0]))
     
+    def find_move(self, start, my_team, enemies):
+        queue = deque([(start, [])])
+        max_depth = math.inf
+        visited = {start}
+        while queue:
+            node, path = queue.popleft()
+            for n in self.valid_moves(node, my_team):
+                if n in visited:
+                    continue
+                visited.add(n)
+                if len(path) <= max_depth:    
+                    if n in enemies:
+                        max_depth = len(path)
+                        yield path
+                    else:
+                        queue.append((n, path + [n]))
+                elif max_depth < math.inf:
+                    return
 
-    def multiple_shortest_path(self, source, dest):
-        """
-        https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
-        """
-        Q = set(self.adjacency.keys())
-
-        dist = {n: math.inf for n in Q}
-        prev = {}
-
-        dist[source] = 0
-
-        while Q:
-            nd = {l: dist[l] for l in Q}
-            u = min(nd, key=nd.get)
-            if u == dist:
-                break
-            Q.remove(u)
-            for v in self.available_moves(u):
-                alt = dist[u] + 1
-                if alt <= dist[v]:
-                    dist[v] = alt
-                    if v not in prev:
-                        prev[v] = set()
-                    prev[v].add(u)
-
-        # prev is now an adjacency graph describing all
-        # shortest path alternatives between source and
-        # dest. But we only care about the first step,
-        # so find all edges out of the start node and
-        # choose the one that's the "earliest" in row-col
-        # order.
-
-        start_options = self.all_start_squares(prev, source, dest)
-
-        if start_options:
-            square = start_options[0]
-            return square, dist[dest]
-
-        return None, None
 
     @classmethod
     def from_data(cls, lines):
@@ -187,49 +110,22 @@ class Cave:
             for x, item in enumerate(row):
                 if item == "#":
                     continue
-                coord = (x, y)
-                data.add(coord)
+                p = (x, y)
+                data.add(p)
                 if item == "G":
-                    goblins[coord] = Goblin(pos=coord)
+                    goblins[p] = Goblin(pos=p)
                 elif item == "E":
-                    elves[coord] = Elf(pos=coord)
+                    elves[p] = Elf(pos=p)
 
         # build adjacency graph
         graph = {
-            coord: {n for n in adj(coord) if n in data}
-            for coord in data
+            p: {n for n in adj(p) if n in data}
+            for p in data
         }
 
         return cls(graph, elves, goblins, (x+1, y+1))
 
-    @classmethod
-    def from_data_(cls, lines):
-        elves, goblins = {}, {}
-        data = set()
-        for y, row in enumerate(lines):
-            for x, item in enumerate(row[0]):
-                if item == "#":
-                    continue
-                coord = (x, y)
-                data.add(coord)
-                if item == "G":
-                    g = Goblin(pos=coord)
-                    g.hitpoints = row[1].pop(0)
-                    goblins[coord] = g
-                elif item == "E":
-                    e = Elf(pos=coord)
-                    e.hitpoints = row[1].pop(0)
-                    elves[coord] = e
-
-        # build adjacency graph
-        graph = {
-            coord: {n for n in adj(coord) if n in data}
-            for coord in data
-        }
-
-        return cls(graph, elves, goblins, (x+1, y+1))
-
-    def display_full(self):
+    def display(self, print_hp=True):
         for y in range(self.dim[1]):
             hp = []
             for x in range(self.dim[0]):
@@ -237,22 +133,35 @@ class Cave:
                 if isinstance(c, Goblin) or isinstance(c, Elf):
                     hp.append(c.hitpoints)
                 print(str(c), end="")
-            if hp:
+            if hp and print_hp:
                 print("    ", " ".join([str(h) for h in hp]), end="")
             print()
 
+    def teams(self, pos):
+        if pos in self.elves:
+            return self.elves, self.goblins
 
-    def to_str(self):
-        return [
-            [str(self.at((x, y))) for x in range(self.dim[0])]
-            for y in range(self.dim[1])
-        ]
+        if pos in self.goblins:
+            return self.goblins, self.elves
 
-    def overlay(self, coords, ch):
-        s = self.to_str()
-        for x, y in coords:
-            s[y][x] = ch
-        return s
+        return None, None
+
+    def first_move_available(self, pos):
+        for n in adj(pos):
+            if self.at(n) == ".":
+                return True
+
+        return False
+
+    def in_range(self, targets):
+        """
+        Return True if any open squares exist in an attacking position.
+        """
+        for pos in targets.keys():
+            if self.first_move_available(pos):
+                return True
+
+        return False
 
     def move(self, start):
         """
@@ -260,54 +169,51 @@ class Cave:
         position. If already in attacking position, piece won't move. Returns
         position after move (may be the start pos).
         """
-        if start in self.elves:
-            my_team = self.elves
-            enemies = self.goblins
-        elif start in self.goblins:
-            my_team = self.goblins
-            enemies = self.elves
-        else:
+
+        # Sanity check that we're still here.
+        if start not in self.goblins and start not in self.elves:
             return start
 
-        # If I'm in an attacking position, I can't move.
+        my_team, enemies = self.teams(start)
+
+        # If no open attacking squares exist, we can't move. This doesn't imply
+        # game over, as attacks may be in progress.
+        if not self.in_range(enemies):
+            return start
+
+        # If I'm already in an attacking position, I don't move.
         for n in adj(start):
             if n in enemies:
                 return start
 
-        targets = self.in_range(enemies)
-
-        if not targets:
+        # If there are no open squares around me, I can't move.
+        if not self.first_move_available(start):
             return start
 
-        best = (math.inf, None)
+        paths = list(self.find_move(start, my_team, enemies))
 
-        for target in targets:
-            square, cost = self.multiple_shortest_path(start, target)
-            if square and cost < best[0]:
-                best = (cost, square)
+        if not paths:
+            return start
 
-        if best[1]:
-            next_square = best[1]
-            piece = my_team.pop(start)
-            piece.pos = next_square
-            my_team[next_square] = piece
-            return next_square
+        next_square = sorted(list({path[0] for path in paths}), key=lambda x: (x[1], x[0]))[0]
 
-        return start
+        piece = my_team.pop(start)
+        piece.pos = next_square
+        my_team[next_square] = piece
+
+        return next_square
 
     def attack(self, pos):
         """
         If pos is in an attacking position, execute the attack. Return True if
-        an attack was made, False if not.
+        an attack was made, False if not. 
         """
-        if pos in self.elves:
-            my_team = self.elves
-            enemies = self.goblins
-        elif pos in self.goblins:
-            my_team = self.goblins
-            enemies = self.elves
-        else:
+
+        # Sanity check: we may have already been killed.
+        if pos not in self.goblins and pos not in self.elves: 
             return False
+
+        my_team, enemies = self.teams(pos)
 
         # Find any attackable neighbours, ordered by hitpoints in reading order
         attackable = sorted(
@@ -317,7 +223,6 @@ class Cave:
 
         perpetrator = my_team[pos]
         if attackable:
-
             victim = attackable[0]
             victim.hitpoints -= perpetrator.attack
 
@@ -353,7 +258,6 @@ class Cave:
 if __name__ == "__main__":
     lines = read_data()
     cave = Cave.from_data(lines)
-    cave.display_full()
     turns = 1
     game_over = False
     while not game_over:
@@ -362,9 +266,10 @@ if __name__ == "__main__":
             break
         turns += 1
 
-    cave.display_full()
-    hp = sum(cave.hitpoints_remaining().values())
+    hp = cave.hitpoints_remaining()
 
     print(f"Part1: {(turns-1)*hp}")
+
+    
 
 
