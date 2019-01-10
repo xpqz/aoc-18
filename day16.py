@@ -5,7 +5,6 @@ by Stefan Kruger
 
 from copy import copy
 from collections import defaultdict
-import json
 import re
 
 class Instr:
