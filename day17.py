@@ -54,28 +54,6 @@ class Cave:
 
         return "."
         
-    def wetsquares(self):
-        return len(self.wet_sand.union(self.settled))
-
-    def display(self):
-        for y in range(self.ydim[1]):
-            print("".join([
-                self.at(x, y)
-                for x in range(*self.xdim)
-            ]))
-
-        print(f"Wet squares: {self.wetsquares()}")
-
-    def fdisplay(self, iteration=0):
-        filename = 'tmp/cave{0:03}.txt'.format(iteration)
-        with open(filename, "w") as f:
-            for y in range(self.ydim[1]):
-                line = "".join([
-                    self.at(x, y)
-                    for x in range(*self.xdim)
-                ])
-                f.write(f"{line}\n")
-
         
     def neighbours(self, x, y):
         n = {}
@@ -196,7 +174,7 @@ if __name__ == "__main__":
     i = 0
     while i < 819:
         c.fill((500, 1))
-        i+=1
+        i += 1
 
     s = 0
     for pos in c.wet_sand.union(c.settled):
