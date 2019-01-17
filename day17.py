@@ -8,6 +8,21 @@ def read_data(filename="data/input17.data"):
     with open(filename) as f:
         return f.read().splitlines()
 
+class UniqueStack:
+    def __init__(self):
+        self.stack = []
+        self.seen = set()
+
+    def append(self, item):
+        if item not in self.seen:
+            self.stack.append(item)
+            self.seen.add(item)
+
+    def pop(self):
+        return self.stack.pop()
+
+    def empty(self):
+        return self.stack == []
 
 class Cave:
     def __init__(self, clay, xdim, ydim):
@@ -54,7 +69,6 @@ class Cave:
 
         return "."
         
-        
     def neighbours(self, x, y):
         n = {}
         if y > self.ydim[1]:
@@ -85,14 +99,14 @@ class Cave:
             self.settled.update(segment)
             self.wet_sand = self.wet_sand.difference(self.settled)
         
-
     def fill(self, start, iteration=0): # should start one below the spout
         """
         State machine, with state being the direction of travel.
         """
-        stack = [(start, 'down')]
-        seen = {(start, 'down')}
-        while stack:
+        stack = UniqueStack()
+        stack.append((start, 'down'))
+
+        while not stack.empty():
             (pos, heading) = stack.pop()
             
             # Stop at the edge
@@ -110,18 +124,12 @@ class Cave:
                 # need to change to downwards if the space _below_ is also "."
                 if heading in {"left", "right"}:
                     if "down" in adj and self.at(*adj["down"]) == ".":
-                        if (adj["down"], "down") not in seen:
-                            stack.append((adj["down"], "down"))
-                            seen.add((adj["down"], "down"))
+                        stack.append((adj["down"], "down"))
                         continue
 
                 # Ok, just carry on in the direction of travel
                 try:
-                    # if iteration==78:
-                    #     print((adj[heading], heading))
-                    if (adj[heading], heading) not in seen:
-                        stack.append((adj[heading], heading))
-                        seen.add((adj[heading], heading))
+                    stack.append((adj[heading], heading))
                 except KeyError:
                     pass
                 continue
@@ -132,13 +140,8 @@ class Cave:
                     # check left and right nodes of my _previous_ location.
                     parent_adj = self.neighbours(pos[0], pos[1]-1)
                     try:
-                        if (parent_adj["left"], "left") not in seen:
-                            stack.append((parent_adj["left"], "left"))
-                            seen.add((parent_adj["left"], "left"))
-                        if (parent_adj["right"], "right") not in seen:
-                            stack.append((parent_adj["right"], "right"))
-                            seen.add((parent_adj["right"], "right"))
-
+                        stack.append((parent_adj["left"], "left"))
+                        stack.append((parent_adj["right"], "right"))
                     except KeyError:
                         pass
                     continue
@@ -153,16 +156,12 @@ class Cave:
                 # need to change to downwards if the space _below_ is "." or "|"
                 if heading in {"left", "right"}:
                     if "down" in adj and self.at(*adj["down"]) in {".", "|"}:
-                        if (adj["down"], "down") not in seen:
-                            stack.append((adj["down"], "down"))
-                            seen.add((adj["down"], "down"))
+                        stack.append((adj["down"], "down"))
                         continue
 
                 # Ok, just carry on in the direction of travel
                 try:
-                    if (adj[heading], heading) not in seen:
-                        stack.append((adj[heading], heading))
-                        seen.add((adj[heading], heading))
+                    stack.append((adj[heading], heading))
                 except KeyError:
                     pass
             
