@@ -31,10 +31,6 @@ class Forest:
         """
         Return new state at (x, y)
         """
-        # if y==0 and x==6:
-        #     import pdb
-        #     pdb.set_trace()
-
         neighbours = Counter()
         for yy in [-1, 0, 1]:
             ypos = y+yy
@@ -79,6 +75,7 @@ class Forest:
 
         self.data = d
         self.counter = c
+ 
 
 if __name__ == "__main__":
     lines = read_data()
@@ -87,10 +84,26 @@ if __name__ == "__main__":
 
     for i in range(1, 11):
         forest.generate()
-        forest.display()
-        print()
 
-    print(forest.counter)
+    print(f"Part1: {forest.counter[TREE] * forest.counter[LUMBER]}")
+
+    # Part 2, what's the value after a beeeeellioooon iterations?
+    # 
+    # Too large to actually run, but all "game of life"-style cellular
+    # automata fall into certain patterns, especially as this one is
+    # constrained to a 50x50 grid.
+    # 
+    # We can assume that it will either converge to a stable state, or 
+    # become periodic.
+    #
+    # By just letting this run and looking at the visualisation, it's 
+    # clear that it very quickly becomes periodic (period 28). The value 
+    # at 1_000_000_000 generations should be the same as the value at 1_000.
+
+    forest = Forest.from_data(lines)
+    for i in range(1, 1_001):
+        forest.generate()
+
+    print(f"Part2: {forest.counter[TREE] * forest.counter[LUMBER]}")
 
 
-    
