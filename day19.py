@@ -2,7 +2,6 @@
 day 19 of Advent of Code 2018
 by Stefan Kruger
 """
-import time
 import re
 
 class Instr:
@@ -29,12 +28,12 @@ class Instr:
 
     @staticmethod
     def setr(register, instr):
-        (_op, A, B, C) = instr
+        (_op, A, _B, C) = instr
         register[C] = register[A]
 
     @staticmethod
     def seti(register, instr):
-        (_op, A, B, C) = instr
+        (_op, A, _B, C) = instr
         register[C] = A
 
     @staticmethod
