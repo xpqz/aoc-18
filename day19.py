@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     # Part2: starting with register = [1, 0, 0, 0, 0, 0] is a very
     # different proposition. There are two nested loops, the key one
-    # the sectin at ip=3-11. In all it basically looks like this:
+    # the section at ip=3-11. In all it basically looks like this:
     #
     # reg = [0, 1, 10551432, 1, 1, 3] -- state when we enter loop
     # 
