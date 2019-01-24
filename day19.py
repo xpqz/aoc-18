@@ -2,7 +2,6 @@
 day 19 of Advent of Code 2018
 by Stefan Kruger
 """
-import re
 
 class Instr:
 
