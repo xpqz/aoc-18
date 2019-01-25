@@ -94,7 +94,11 @@ if __name__ == "__main__":
 
     print(f"Part1: {register[0]}")
 
-    # Part2: starting with register = [1, 0, 0, 0, 0, 0] is a very
+    # Part2: note that the solution as presented here is only valid
+    # for the specific input as given in data/input19.data. It was
+    # arrived at by disassembling the code 'by hand'.
+    #
+    # Starting with register = [1, 0, 0, 0, 0, 0] is a very
     # different proposition. There are two nested loops, the key one
     # the section at ip=3-11. In all it basically looks like this:
     #
