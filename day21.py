@@ -133,6 +133,9 @@ if __name__ == "__main__":
     register = [0, 0, 0, 0, 0, 0]
     opcodes = Instr.symtable() 
 
+    solutions = set()
+    candidate = None
+
     while ip < len(instructions):
         # Fetch
         instr = instructions[ip]
@@ -154,4 +157,41 @@ if __name__ == "__main__":
         ip += 1
 
     print(f"Part1: {register[2]}")
+
+    
+    # For part 2 we keep track of all solutions until
+    # they start to repeat. The last value of the cycle
+    # is the one we want
+
+    solutions = set()
+    candidate = None
+
+    ip = 0
+    register = [0, 0, 0, 0, 0, 0]
+
+    while ip < len(instructions):
+        # Fetch
+        instr = instructions[ip]
+        op = opcodes[instr[0]]
+
+        # Copy IP into bound register
+        register[ip_reg] = ip
+
+        # Execute instruction
+        op(register, instr)
+
+        if ip == 28:
+            if register[2] in solutions:
+                break
+            candidate = register[2]
+            solutions.add(register[2])
+    
+        
+        # Copy IP from bound register
+        ip = register[ip_reg]
+
+        # Next instruction
+        ip += 1
+
+    print(f"Part2: {candidate}")
 
