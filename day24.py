@@ -1,8 +1,16 @@
+"""
+day 24 of Advent of Code 2018
+by Stefan Kruger
+"""
+
+from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 import heapq
 from itertools import chain
 import re
+
+BOOST = 0
 
 class Team(Enum):
     IMMUNE = 0
@@ -36,7 +44,8 @@ class Group:
     gid: int = -1
 
     def effective_power(self):
-        return self.unit.attack.damage * self.count
+        factor = BOOST if self.kind == Team.IMMUNE else 0
+        return (self.unit.attack.damage + factor) * self.count
 
     def damage_taken(self, attacker):
         if attacker.unit.attack.kind in self.unit.immunity:
@@ -210,43 +219,52 @@ def fight(immune, infection, max_initiative):
 
     attack_queue = []
 
-    immune.info()
-    infection.info()
-    print()
-
     # 2. Deal damage in (global) decreasing order of initiative
     for roster in chain(infection_targets, immune_targets):
-        damage = roster.defender.damage_taken(roster.attacker)  # note: can't cache this!
-        print(f"{roster.attacker.kind} group {roster.attacker.gid+1} would deal defending group {roster.defender.gid+1} {damage} damage")
-        heapq.heappush(attack_queue, (max_initiative-roster.attacker.initiative, roster.attacker, roster.defender))
-
-    print()
+        roster.defender.damage_taken(roster.attacker)
+        heapq.heappush(attack_queue, (
+            max_initiative-roster.attacker.initiative,
+            roster.attacker,
+            roster.defender
+        ))
 
     while attack_queue:
         (_, attacker, defender) = heapq.heappop(attack_queue)
-
-        hp, cx = defender.unit.hitpoints, defender.count
-
-        killed, damage = attacker.attack(defender)
-
-        print(f"{attacker.kind} group {attacker.gid+1} attacks defending group {defender.gid+1}, inflicting {damage} killing {killed} units (was hp: {hp} count: {cx})")
+        attacker.attack(defender)
 
 
 if __name__ == "__main__":
-
-    print()
-
-    # immune, infection, max_initiative = parse_data(read_data("data/test24.data"))
-
     immune, infection, max_initiative = parse_data(read_data())
 
     i= 1
     while immune.alive() and infection.alive():
-        print(f"------------ FIGHT {i} ------------")
         fight(immune, infection, max_initiative)
         i += 1
-        print()
 
     print(f"------------ WINNER ------------")
     immune.info()
     infection.info()
+
+    immune, infection, max_initiative = parse_data(read_data())
+
+    # Binary search over the "boost" to find the lowest boost required
+    # to ensure an immune victory. The answer is the last immune win shown.
+    # Fights take increasingly longer as the number of units decrease on
+    # both sides. An improvement would be to detect this and bail.
+    boost_range = [1, 10_000]
+    while boost_range[1] - boost_range[0] > 1:
+        BOOST = sum(boost_range)//2
+
+        print(BOOST, boost_range)
+        imm = deepcopy(immune)
+        inf = deepcopy(infection)
+
+        while imm.alive() and inf.alive():
+            fight(imm, inf, max_initiative)
+
+        imm.info()
+
+        if imm.alive():  # Try smaller boost
+            boost_range[1] = BOOST - 1
+        else:
+            boost_range[0] = BOOST + 1
